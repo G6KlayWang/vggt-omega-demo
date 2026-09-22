@@ -1,0 +1,11 @@
+*.pt
+*.pth
+*.safetensors
+__pycache__/
+.venv/
+outputs/
+*.zip
+.DS_Store
+AGENTS.md
+.env
+.env.*

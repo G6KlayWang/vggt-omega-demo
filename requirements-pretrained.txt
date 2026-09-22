@@ -1,0 +1,4 @@
+-r requirements.txt
+torchvision>=0.21
+# Needed only for --video (bundled JPEG samples do not require OpenCV).
+opencv-python-headless>=4.8
