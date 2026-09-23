@@ -183,12 +183,17 @@ Use the bundled forest-road video as a data source for a separate demo:
 python pretrained.py --video upstream/examples/forest_road.mp4 --frames 8 --resolution 512 --device auto --out outputs/video
 ```
 
-This samples eight distinct frames from the first second, runs the pretrained
+This samples eight distinct frames evenly across the entire video, including the
+first and last frames, runs the pretrained
 model jointly on them, and exports `outputs/video/demo.html`. Open that file to
 play the source video and explore the static 3D reconstruction. This is sampled
 video reconstruction, not real-time video processing. The manifest records the
 video path, frame indices, and timestamps. Keep `source.mp4` beside `demo.html`
 when sharing the viewer, or share the entire `outputs/video/` folder.
+
+`--frames` sets the total number of samples, not frames per second. Increase it
+for longer clips to preserve overlap between adjacent views; more frames use
+more GPU memory. Request no more frames than the video contains.
 
 Replace the video path with your own clip to use another data source. Use a slow
 camera movement through a mostly static scene with overlapping views. Reduce

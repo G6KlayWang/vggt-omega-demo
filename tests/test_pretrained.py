@@ -3,10 +3,25 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from pretrained import camera_frustums, non_sky_mask
+from pretrained import camera_frustums, non_sky_mask, video_frame_indices
 
 
 class ViewerTests(unittest.TestCase):
+    def test_video_sampling_spans_entire_clip(self):
+        indices = video_frame_indices(303, 8)
+        self.assertEqual(len(indices), 8)
+        self.assertEqual(indices[0], 0)
+        self.assertEqual(indices[-1], 302)
+        self.assertTrue((np.diff(indices) > 0).all())
+        self.assertLessEqual(np.ptp(np.diff(indices)), 1)
+
+    def test_short_video_has_no_duplicate_samples(self):
+        np.testing.assert_array_equal(video_frame_indices(3, 3), [0, 1, 2])
+        np.testing.assert_array_equal(video_frame_indices(2, 2), [0, 1])
+        for total, count in [(3, 4), (0, 2), (10, 1)]:
+            with self.assertRaises(ValueError):
+                video_frame_indices(total, count)
+
     def test_camera_center_and_frustum_reproject(self):
         k = np.array([[80., 0, 40], [0, 80, 30], [0, 0, 1]])
         rotation = np.array([[0., 0, 1], [0, 1, 0], [-1, 0, 0]])

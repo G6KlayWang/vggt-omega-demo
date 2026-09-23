@@ -79,13 +79,22 @@ def camera_frustums(intrinsics, extrinsics, image_shape, center, scale):
     return result
 
 
+def video_frame_indices(total, count):
+    """Evenly sample distinct frames, including the first and last video frames."""
+    if count < 2 or total < 2:
+        raise ValueError("Video sampling requires at least two frames")
+    if count > total:
+        raise ValueError(f"Video contains only {total} frames; reduce --frames to {total} or fewer")
+    return np.linspace(0, total - 1, count).astype(int)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--checkpoint", type=Path, default=Path("vggt_omega_1b_512.pt"))
     source = p.add_mutually_exclusive_group()
     source.add_argument("--images", nargs="+", type=Path)
-    source.add_argument("--video", type=Path, help="Video input; uniformly samples its first second")
-    p.add_argument("--frames", type=int, default=3)
+    source.add_argument("--video", type=Path, help="Video input; uniformly samples the entire clip")
+    p.add_argument("--frames", type=int, default=3, help="Number of frames sampled across the entire video (default: 3)")
     p.add_argument("--resolution", type=int, default=256)
     p.add_argument("--max-viewer-points", type=int, default=100000,
                    help="Maximum points exported to the HTML viewer before its confidence slider (default: 100000)")
@@ -125,11 +134,15 @@ def main():
         if not np.isfinite(fps) or fps <= 0 or total < 2:
             capture.release()
             p.error("Video must have a valid frame rate and at least two frames")
-        indices = np.linspace(0, min(total - 1, max(1, int(fps))), args.frames).astype(int)
-        if len(np.unique(indices)) != args.frames:
+        try:
+            indices = video_frame_indices(total, args.frames)
+        except ValueError as exc:
             capture.release()
-            p.error("Not enough distinct frames in the first second; reduce --frames")
+            p.error(str(exc))
+        logging.info("Sampling %d frames across the full video: %.3fs to %.3fs",
+                     len(indices), indices[0] / fps, indices[-1] / fps)
         video_metadata = {"source": str(args.video.resolve()), "fps": fps,
+                          "sampling": "uniform_full_video", "total_frames": total,
                           "frame_indices": indices.tolist(),
                           "timestamps_seconds": (indices / fps).round(4).tolist()}
         paths = []
