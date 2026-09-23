@@ -26,6 +26,8 @@ def main():
     p.add_argument("--resolution", type=int, default=256)
     p.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     p.add_argument("--out", type=Path, default=Path("outputs/real"))
+    p.add_argument("--filter-white-bg", action="store_true", help="Remove points with all RGB channels >240/255 from PLY and viewer")
+    p.add_argument("--filter-black-bg", action="store_true", help="Remove points with RGB sum <16/255 from PLY and viewer")
     args = p.parse_args()
     if args.frames < 2 or args.resolution < 64 or args.resolution % 16:
         p.error("Use at least two frames and a resolution >=64 divisible by 16")
@@ -103,6 +105,15 @@ def main():
     np.savez_compressed(args.out / "predictions.npz", **arrays)
     points = np.stack([unproject(d, k, e) for d, k, e in zip(arrays["depth"], arrays["intrinsics"], arrays["extrinsics"])])
     valid = (arrays["depth"] > 0) & np.isfinite(points).all(-1)
+    rgb = (arrays["images"] * 255).clip(0, 255).astype(np.uint8)
+    before_filter = int(valid.sum())
+    if args.filter_white_bg:
+        valid &= ~(rgb > 240).all(axis=-1)
+    if args.filter_black_bg:
+        valid &= rgb.sum(axis=-1) >= 16
+    logging.info("Background filtering retained %d / %d valid points", valid.sum(), before_filter)
+    if not valid.any():
+        raise RuntimeError("No valid points remain after background filtering; disable the filters and retry")
     threshold = np.quantile(arrays["confidence"][valid], .5)
     keep = valid & (arrays["confidence"] >= threshold)
     write_ply(args.out / "reconstruction.ply", points[keep], arrays["images"][keep])
@@ -128,6 +139,7 @@ def main():
     manifest = {"checkpoint": str(args.checkpoint.resolve()), "images": [str(x) for x in paths],
                 "device": device, "resolution": args.resolution, "seconds": payload["seconds"],
                 "exported_points": int(keep.sum()), "confidence_percentile": 50,
+                "filter_white_bg": args.filter_white_bg, "filter_black_bg": args.filter_black_bg,
                 "upstream_revision": "a3ab0141f96838724423541044ff5ba301cfd36a"}
     (args.out / "manifest.json").write_text(json.dumps(manifest, indent=2))
     logging.info("Saved %s", json.dumps(manifest))

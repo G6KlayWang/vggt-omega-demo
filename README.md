@@ -145,6 +145,12 @@ from the code archive. Default inputs are the three bundled JPEGs. To use your o
 python pretrained.py --device cuda --checkpoint /path/to/model.pt --images image1.jpg image2.jpg image3.jpg
 ```
 
+Add `--filter-white-bg` or `--filter-black-bg` (or both) to remove near-white
+or near-black points from the PLY and offline viewer. White means all RGB
+channels exceed 240; black means their sum is below 16, on a 0–255 scale.
+These color filters also remove matching object colors. They run after inference,
+before confidence filtering; raw arrays in `predictions.npz` remain unchanged.
+
 Outputs are under `outputs/real/`: raw depth, confidence, RGB, and camera arrays in
 `predictions.npz`; `reconstruction.ply`; a run manifest; and an optional offline
 point-cloud viewer. PLY retains the top 50% of confidence scores. Confidence is not
