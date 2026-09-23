@@ -2,3 +2,5 @@
 torchvision>=0.21
 # Needed only for --video (bundled JPEG samples do not require OpenCV).
 opencv-python-headless>=4.8
+# Used by the optional --filter-sky flag (runs on CPU alongside GPU reconstruction).
+onnxruntime>=1.20

@@ -9,3 +9,4 @@ outputs/
 AGENTS.md
 .env
 .env.*
+/data/

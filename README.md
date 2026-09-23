@@ -151,6 +151,15 @@ channels exceed 240; black means their sum is below 16, on a 0–255 scale.
 These color filters also remove matching object colors. They run after inference,
 before confidence filtering; raw arrays in `predictions.npz` remain unchanged.
 
+Add `--filter-sky` to remove sky points from the PLY and viewer with the sky
+segmentation model used by the official demo. Install `onnxruntime` first; the
+initial run downloads its weights to `~/.cache/vggt-demo/skyseg.onnx`. For a server
+without download access, copy the weights there or pass `--sky-model /path/to/skyseg.onnx`.
+The model is hosted at <https://huggingface.co/JianyuanWang/skyseg>.
+Add `--show-cameras` to draw numbered camera frustums and a dashed trajectory in
+the HTML viewer, with a checkbox to hide them. Camera geometry uses the same
+centering and scale as the point cloud; the PLY contains only scene points.
+
 Outputs are under `outputs/real/`: raw depth, confidence, RGB, and camera arrays in
 `predictions.npz`; `reconstruction.ply`; a run manifest; and an optional offline
 point-cloud viewer. PLY retains the top 50% of confidence scores. Confidence is not
@@ -158,6 +167,27 @@ a calibrated probability, and the sample has no ground truth. Use `--resolution
 256` if memory is tight; the 512 checkpoint is trained at higher resolution. The
 adapter was exercised locally on Apple MPS; the CUDA path is included but has not
 been exercised on this machine.
+
+## Video-input demo
+
+Use the bundled forest-road video as a data source for a separate demo:
+
+```bash
+python pretrained.py --video upstream/examples/forest_road.mp4 --frames 8 --resolution 512 --device auto --out outputs/video
+```
+
+This samples eight distinct frames from the first second, runs the pretrained
+model jointly on them, and exports `outputs/video/demo.html`. Open that file to
+play the source video and explore the static 3D reconstruction. This is sampled
+video reconstruction, not real-time video processing. The manifest records the
+video path, frame indices, and timestamps. Keep `source.mp4` beside `demo.html`
+when sharing the viewer, or share the entire `outputs/video/` folder.
+
+Replace the video path with your own clip to use another data source. Use a slow
+camera movement through a mostly static scene with overlapping views. Reduce
+`--frames` or use `--resolution 256` if memory is tight. The existing image demos
+remain in their own output folders. Bundled videos come from the pinned upstream
+repository and remain subject to its license.
 
 ## Files to share and explain
 
