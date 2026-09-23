@@ -160,6 +160,13 @@ Add `--show-cameras` to draw numbered camera frustums and a dashed trajectory in
 the HTML viewer, with a checkbox to hide them. Camera geometry uses the same
 centering and scale as the point cloud; the PLY contains only scene points.
 
+The HTML viewer exports up to 100,000 points by default. Use
+`--max-viewer-points 200000` for a denser view, or lower it for faster browser
+interaction. The confidence slider initially shows approximately half of these
+points; move it toward 100% to show more, including lower-confidence predictions.
+Rerun the command to regenerate the viewer after changing this limit. This option
+does not change inference resolution or the PLY export.
+
 Outputs are under `outputs/real/`: raw depth, confidence, RGB, and camera arrays in
 `predictions.npz`; `reconstruction.ply`; a run manifest; and an optional offline
 point-cloud viewer. PLY retains the top 50% of confidence scores. Confidence is not

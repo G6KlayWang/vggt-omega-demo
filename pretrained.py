@@ -87,6 +87,8 @@ def main():
     source.add_argument("--video", type=Path, help="Video input; uniformly samples its first second")
     p.add_argument("--frames", type=int, default=3)
     p.add_argument("--resolution", type=int, default=256)
+    p.add_argument("--max-viewer-points", type=int, default=100000,
+                   help="Maximum points exported to the HTML viewer before its confidence slider (default: 100000)")
     p.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     p.add_argument("--out", type=Path, default=Path("outputs/real"))
     p.add_argument("--filter-white-bg", action="store_true", help="Remove points with all RGB channels >240/255 from PLY and viewer")
@@ -97,6 +99,8 @@ def main():
     args = p.parse_args()
     if args.frames < 2 or args.resolution < 64 or args.resolution % 16:
         p.error("Use at least two frames and a resolution >=64 divisible by 16")
+    if args.max_viewer_points < 1:
+        p.error("--max-viewer-points must be a positive integer")
     if not args.checkpoint.is_file():
         p.error(f"Checkpoint not found: {args.checkpoint}")
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
@@ -200,7 +204,8 @@ def main():
     write_ply(args.out / "reconstruction.ply", points[keep], arrays["images"][keep])
     # Deterministic subsampling for a lightweight offline canvas viewer.
     candidates = np.flatnonzero(valid.ravel())
-    indices = candidates[np.linspace(0, len(candidates) - 1, min(18000, len(candidates))).astype(int)]
+    indices = candidates[np.linspace(0, len(candidates) - 1, min(args.max_viewer_points, len(candidates))).astype(int)]
+    logging.info("Exporting %d / %d valid points to the HTML viewer", len(indices), len(candidates))
     flat_points = points.reshape(-1, 3)[indices]
     center = np.median(points[keep], axis=0)
     scale = np.quantile(np.linalg.norm(points[keep] - center, axis=-1), .90)
@@ -230,6 +235,7 @@ def main():
     manifest = {"checkpoint": str(args.checkpoint.resolve()), "images": [str(x) for x in paths],
                 "device": device, "resolution": args.resolution, "seconds": payload["seconds"],
                 "exported_points": int(keep.sum()), "confidence_percentile": 50,
+                "viewer_points": len(indices), "max_viewer_points": args.max_viewer_points,
                 "filter_white_bg": args.filter_white_bg, "filter_black_bg": args.filter_black_bg,
                 "filter_sky": args.filter_sky, "show_cameras": args.show_cameras,
                 "upstream_revision": "a3ab0141f96838724423541044ff5ba301cfd36a"}
